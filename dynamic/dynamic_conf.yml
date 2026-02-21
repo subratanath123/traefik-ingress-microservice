@@ -1,0 +1,38 @@
+http:
+  routers:
+    # Route for Frontend (subratapc.net)
+    frontend-router:
+      rule: "Host(`subratapc.net`)"
+      entryPoints:
+        - websecure
+      service: frontend-service
+      tls: {} # Enables self-signed HTTPS automatically
+
+    # Route for Backend (subratapc.net/api)
+    backend-router:
+      rule: "Host(`subratapc.net`) && (PathPrefix(`/api`) || PathPrefix(`/v1`) || PathPrefix(`/mcp`) || PathPrefix(`/actuator`))"
+      entryPoints:
+        - websecure
+      service: backend-service
+      tls: {}
+
+  services:
+    frontend-service:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:3000"
+    
+    backend-service:
+      loadBalancer:
+        # Traefik will check these URLs every 10 seconds
+        healthCheck:
+          path: /actuator/health  # Change to your app's health endpoint (e.g., /ping or /)
+          interval: "10s"
+          timeout: "3s"
+        
+        servers:
+          # LOCAL BACKEND (Priority 1)
+          - url: "http://host.docker.internal:8080"
+          
+          # CLOUD BACKEND (Backup)
+          - url: "https://api.jadeordersmedia.com"
